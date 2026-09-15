@@ -1,5 +1,5 @@
 FEEDS = [
-    # Australian Outlets
+    # ─── AUSTRALIAN DOMESTIC & BUSINESS ───────────────────────────
     {
         "name": "ABC News AU",
         "domain": "abc.net.au",
@@ -7,6 +7,22 @@ FEEDS = [
         "region": "AU",
         "category": "Broadsheet",
         "weight": 8,
+    },
+    {
+        "name": "ABC Business",
+        "domain": "abc.net.au",
+        "url": "https://www.abc.net.au/news/feed/46182/rss.xml",
+        "region": "AU",
+        "category": "Economy",
+        "weight": 9,
+    },
+    {
+        "name": "The Age Business",
+        "domain": "theage.com.au",
+        "url": "https://www.theage.com.au/rss/business.xml",
+        "region": "AU",
+        "category": "Economy",
+        "weight": 9,
     },
     {
         "name": "Sydney Morning Herald",
@@ -24,22 +40,31 @@ FEEDS = [
         "category": "Broadsheet",
         "weight": 7,
     },
+
+    # ─── GLOBAL ECONOMIC & BROADSHEET ────────────────────────────
     {
-        "name": "AFR Economy",
-        "domain": "afr.com",
-        "url": "https://www.afr.com/rss/policy/economy",
-        "region": "AU",
-        "category": "Economy",
-        "weight": 9,
-    },
-    # Global Economic & Broadsheet Outlets
-    {
-        "name": "Reuters Business",
-        "domain": "reuters.com",
-        "url": "https://www.reutersagency.com/feed/?best-topics=business-finance&post_type=best",
+        "name": "Wall Street Journal Markets",
+        "domain": "wsj.com",
+        "url": "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
         "region": "GLOBAL",
         "category": "Economy",
         "weight": 10,
+    },
+    {
+        "name": "WSJ World News",
+        "domain": "wsj.com",
+        "url": "https://feeds.a.dj.com/rss/RSSWorldNews.xml",
+        "region": "GLOBAL",
+        "category": "Broadsheet",
+        "weight": 9,
+    },
+    {
+        "name": "MarketWatch Top Stories",
+        "domain": "marketwatch.com",
+        "url": "https://feeds.content.dowjones.io/public/rss/mw_topstories",
+        "region": "GLOBAL",
+        "category": "Economy",
+        "weight": 8,
     },
     {
         "name": "BBC World News",
@@ -50,12 +75,12 @@ FEEDS = [
         "weight": 8,
     },
     {
-        "name": "Financial Times",
-        "domain": "ft.com",
-        "url": "https://www.ft.com/global-economy?format=rss",
+        "name": "CNBC International Economy",
+        "domain": "cnbc.com",
+        "url": "https://search.cnbc.com/rs/search/view.html?partnerId=2000&keywords=economy&sort=date",
         "region": "GLOBAL",
         "category": "Economy",
-        "weight": 9,
+        "weight": 8,
     },
     {
         "name": "The Economist",
