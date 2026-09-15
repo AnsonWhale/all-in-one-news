@@ -19,6 +19,8 @@ def get_db():
 def init_db():
   with get_db() as conn:
     cursor = conn.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL;")
+    cursor.execute("PRAGMA synchronous=NORMAL;")
     cursor.execute("""
             CREATE TABLE IF NOT EXISTS articles (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,5 +44,17 @@ def init_db():
     )
     cursor.execute(
         "CREATE INDEX IF NOT EXISTS idx_region ON articles(region)"
+    )
+    conn.commit()
+
+def prune_old_articles(days: int = 14):
+  with get_db() as conn:
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+            DELETE FROM articles 
+            WHERE published_at < datetime('now', '-' || ? || ' days')
+        """,
+        (days,),
     )
     conn.commit()

@@ -851,6 +851,14 @@
       renderArticles();
     });
 
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            renderWordCloud();
+        }, 250);
+    });
+
     // Initial load
     loadLiveHeadlines();
   </script>

@@ -6,6 +6,7 @@ import feedparser
 import httpx
 from .database import get_db
 from .feeds import FEEDS
+import asyncio
 
 
 def clean_html(raw_html: str) -> str:
@@ -25,7 +26,16 @@ async def fetch_feed(client: httpx.AsyncClient, feed_meta: dict):
   try:
     response = await client.get(
         feed_meta['url'],
-        headers={'User-Agent': 'AllInOneNewsBot/1.0 (+http://localhost)'},
+        HEADERS = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,"
+                " like Gecko) Chrome/124.0.0.0 Safari/537.36"
+            ),
+            "Accept": (
+                "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+            ),
+            "Accept-Language": "en-US,en;q=0.5",
+        },
         timeout=10.0,
     )
     parsed = feedparser.parse(response.content)
@@ -92,5 +102,5 @@ async def fetch_feed(client: httpx.AsyncClient, feed_meta: dict):
 
 async def sync_all_feeds():
   async with httpx.AsyncClient() as client:
-    for feed in FEEDS:
-      await fetch_feed(client, feed)
+    tasks = [fetch_feed(client, feed) for feed in FEEDS]
+    await asyncio.gather(*tasks, return_exceptions=True)
