@@ -1,0 +1,71 @@
+from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from .database import get_db, init_db
+from .fetcher import sync_all_feeds
+from .ranker import rank_and_cluster_articles
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+  init_db()
+  scheduler = AsyncIOScheduler()
+  # Ingest feeds every 20 minutes
+  scheduler.add_job(sync_all_feeds, 'interval', minutes=20)
+  scheduler.start()
+  # Initial fetch on startup
+  await sync_all_feeds()
+  yield
+  scheduler.shutdown()
+
+
+app = FastAPI(title='All in One News Intelligence API', lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=['*'],
+    allow_methods=['*'],
+    allow_headers=['*'],
+)
+
+
+@app.get('/api/news')
+def get_ranked_news(
+    scope: str = Query('global', regex='^(au|global)$'),
+    time_frame: str = Query('daily', regex='^(daily|weekly)$'),
+):
+  hours = 24 if time_frame == 'daily' else 168
+  cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+
+  with get_db() as conn:
+    cursor = conn.cursor()
+    if scope == 'au':
+      cursor.execute(
+          """
+                SELECT * FROM articles 
+                WHERE published_at >= ? AND region = 'AU'
+                ORDER BY published_at DESC LIMIT 150
+            """,
+          (cutoff,),
+      )
+    else:
+      cursor.execute(
+          """
+                SELECT * FROM articles 
+                WHERE published_at >= ?
+                ORDER BY published_at DESC LIMIT 200
+            """,
+          (cutoff,),
+      )
+
+    rows = [dict(r) for r in cursor.fetchall()]
+
+  ranked = rank_and_cluster_articles(rows, scope=scope)
+  return {'total': len(ranked), 'scope': scope, 'articles': ranked}
+
+
+# Mount the frontend directory so browsing to http://localhost:8000 loads the app
+app.mount('/', StaticFiles(directory='static', html=True), name='static')
