@@ -203,19 +203,20 @@
         </div>
       </section>
 
-      <!-- AUTHENTIC ORGANIC WORD CLOUD -->
-      <section class="bg-slate-900/30 border border-slate-800/80 rounded-2xl p-5 relative overflow-hidden">
-        <div class="flex items-center justify-between mb-3 border-b border-slate-800/60 pb-2">
-          <span class="text-[11px] font-mono uppercase tracking-widest text-slate-400 font-semibold flex items-center gap-2">
+    <!-- AUTHENTIC ORGANIC WORD CLOUD (SPIRAL COLLISION) -->
+    <section class="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 relative overflow-hidden">
+        <div class="flex items-center justify-between mb-2 border-b border-slate-800/60 pb-2">
+            <span class="text-[11px] font-mono uppercase tracking-widest text-slate-400 font-semibold flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Semantic Heatmap
-          </span>
-          <span class="text-[10px] font-mono text-slate-500">Click any keyword to filter stories</span>
+            </span>
+            <span id="cloudTermCount" class="text-[10px] font-mono text-slate-500">Calculating...</span>
         </div>
         
-        <div id="wordCloudContainer" class="flex flex-wrap items-baseline justify-center gap-x-4 gap-y-2 py-3 px-2 min-h-[110px] text-center">
-          <!-- Dynamically populated tokens -->
+        <!-- Canvas stage with fixed height and hidden overflow -->
+        <div id="wordCloudContainer" class="relative w-full h-64 sm:h-72 flex items-center justify-center overflow-hidden select-none">
+            <!-- Positioned absolutely via Archimedean spiral algorithm -->
         </div>
-      </section>
+    </section>
 
       <!-- HEADLINES STREAM -->
       <section>
@@ -526,50 +527,146 @@
 
     // Authentic Word Cloud Calculation
     function renderWordCloud() {
-      const container = document.getElementById('wordCloudContainer');
-      const stopWords = new Set(['the','and','for','that','with','from','this','will','amid','after','says','about','into','over','more','their','than','year','market']);
-      const wordCounts = {};
+        const container = document.getElementById('wordCloudContainer');
+        if (!container) return;
 
-      const items = state.articles.filter(a => !state.dismissedIds.has(a.id || a.url));
-      items.forEach(a => {
-        const tokens = (`${a.title} ${a.summary || ''}`).toLowerCase().match(/\b[a-zA-Z]{3,}\b/g) || [];
-        tokens.forEach(t => {
-          if (!stopWords.has(t)) {
-            wordCounts[t] = (wordCounts[t] || 0) + 1;
-          }
+        // 1. DYNAMIC DATA SLICING:
+        // Strictly filter by current region and active articles to reflect slider movements
+        const activePool = state.articles.filter(a => {
+            if (state.dismissedIds.has(a.id || a.url)) return false;
+            if (state.scope === 'au' && a.region !== 'AU') return false;
+            return true;
         });
-      });
 
-      const sortedWords = Object.entries(wordCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 32);
+        const stopWords = new Set([
+            'the','and','for','that','with','from','this','will','amid','after',
+            'says','about','into','over','more','their','than','year','market',
+            'have','been','were','also','could','under','first','per','what'
+        ]);
 
-      if (sortedWords.length === 0) {
-        container.innerHTML = '<span class="text-xs font-mono text-slate-500">Awaiting headline data...</span>';
-        return;
-      }
+        const wordCounts = {};
+        const wordSentiment = {};
 
-      const maxCount = sortedWords[0][1];
-      const minCount = sortedWords[sortedWords.length - 1][1];
+        activePool.forEach(a => {
+            const text = `${a.title} ${a.summary || ''}`.toLowerCase();
+            const tokens = text.match(/\b[a-zA-Z]{4,}\b/g) || [];
+            
+            // De-duplicate per article so one repetitive headline doesn't skew counts
+            const uniqueTokens = new Set(tokens);
+            uniqueTokens.forEach(t => {
+            if (!stopWords.has(t)) {
+                wordCounts[t] = (wordCounts[t] || 0) + 1;
+                wordSentiment[t] = a.tone || 'neutral';
+            }
+            });
+        });
 
-      container.innerHTML = sortedWords.map(([word, count]) => {
-        // Dramatic size scaling: 11px (0.7rem) to 52px (3.25rem)
-        const weight = minCount === maxCount ? 1 : (count - minCount) / (maxCount - minCount);
-        const fontSizeRem = 0.75 + (weight * 2.5);
-        const fontWeight = Math.round(400 + (weight * 500));
-        const opacity = 0.55 + (weight * 0.45);
-        const colorClass = weight > 0.65 ? 'text-sky-300' : weight > 0.35 ? 'text-indigo-300' : 'text-slate-400';
+        // Pick top 28 terms
+        const terms = Object.entries(wordCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 28);
 
-        return `
-          <span 
-            onclick="setKeywordFilter('${word}')" 
-            class="word-cloud-token ${colorClass}"
-            style="font-size: ${fontSizeRem.toFixed(2)}rem; font-weight: ${fontWeight}; opacity: ${opacity};"
-            title="${count} references across feeds">
-            ${word}
-          </span>
-        `;
-      }).join(' ');
+        const termCountBadge = document.getElementById('cloudTermCount');
+        if (termCountBadge) {
+            termCountBadge.textContent = `${terms.length} salient terms (${state.scope.toUpperCase()})`;
+        }
+
+        if (terms.length === 0) {
+            container.innerHTML = '<span class="text-xs font-mono text-slate-500">No terms matching active scope.</span>';
+            return;
+        }
+
+        container.innerHTML = '';
+        const width = container.clientWidth || 800;
+        const height = container.clientHeight || 280;
+        const centerX = width / 2;
+        const centerY = height / 2;
+
+        const maxWeight = terms[0][1];
+        const minWeight = terms[terms.length - 1][1];
+
+        // Store placed bounding boxes to prevent overlapping
+        const placedBoxes = [];
+
+        function doesCollide(box1, box2) {
+            const pad = 4; // padding buffer
+            return !(
+            box1.x + box1.w + pad < box2.x ||
+            box1.x > box2.x + box2.w + pad ||
+            box1.y + box1.h + pad < box2.y ||
+            box1.y > box2.y + box2.h + pad
+            );
+        }
+
+        terms.forEach(([word, count]) => {
+            const relScore = maxWeight === minWeight ? 1 : (count - minWeight) / (maxWeight - minWeight);
+            
+            // Scale font size from 12px up to 42px
+            const fontSize = Math.round(12 + (relScore * 30));
+            const fontWeight = relScore > 0.6 ? 700 : relScore > 0.3 ? 600 : 400;
+
+            // Color palette based on sentiment tone
+            const tone = wordSentiment[word];
+            let colorClass = 'text-slate-400 hover:text-white';
+            if (tone === 'bullish') colorClass = 'text-emerald-400 hover:text-emerald-200';
+            else if (tone === 'caution') colorClass = 'text-rose-400 hover:text-rose-200';
+            else if (relScore > 0.5) colorClass = 'text-sky-300 hover:text-sky-100';
+
+            // Create element for off-screen size calculation
+            const span = document.createElement('span');
+            span.className = `absolute cursor-pointer transition-transform duration-200 ${colorClass}`;
+            span.style.fontSize = `${fontSize}px`;
+            span.style.fontWeight = fontWeight;
+            span.style.fontFamily = 'Newsreader, serif';
+            span.style.whiteSpace = 'nowrap';
+            span.textContent = word;
+            span.title = `${count} mentions in ${state.scope.toUpperCase()} scope`;
+            span.onclick = () => setKeywordFilter(word);
+
+            container.appendChild(span);
+
+            // Approximate bounding box
+            const w = span.offsetWidth || (word.length * fontSize * 0.55);
+            const h = span.offsetHeight || (fontSize * 1.2);
+
+            // Archimedean Spiral: r = a * theta
+            let placed = false;
+            let angle = Math.random() * 6.28; // randomize starting angle
+            let radius = 0;
+            const step = 0.35;
+            const maxRadius = Math.max(width, height) / 2;
+
+            while (radius < maxRadius) {
+            const x = centerX + radius * Math.cos(angle) - (w / 2);
+            const y = centerY + (radius * 0.55) * Math.sin(angle) - (h / 2); // Oval aspect ratio
+
+            const candidateBox = { x, y, w, h };
+            let collision = false;
+
+            for (let i = 0; i < placedBoxes.length; i++) {
+                if (doesCollide(candidateBox, placedBoxes[i])) {
+                collision = true;
+                break;
+                }
+            }
+
+            if (!collision) {
+                span.style.left = `${Math.round(x)}px`;
+                span.style.top = `${Math.round(y)}px`;
+                placedBoxes.push(candidateBox);
+                placed = true;
+                break;
+            }
+
+            angle += step;
+            radius = 3.5 * angle;
+            }
+
+            // Fallback: hide if it couldn't fit on screen without collision
+            if (!placed) {
+            span.style.display = 'none';
+            }
+        });
     }
 
     // Controls & State Setters
