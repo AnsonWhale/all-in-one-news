@@ -10,13 +10,28 @@ STOPWORDS = {
     'that',
     'with',
     'from',
-    'amid',
-    'australia',
-    'global',
-    'says',
+    'this',
     'will',
-    'over',
+    'amid',
     'after',
+    'says',
+    'about',
+    'into',
+    'over',
+    'more',
+    'their',
+    'than',
+    'year',
+    'market',
+    'have',
+    'been',
+    'were',
+    'also',
+    'could',
+    'under',
+    'first',
+    'australia',
+    'australian',
 }
 
 
@@ -41,8 +56,9 @@ def rank_and_cluster_articles(raw_articles: list[dict], scope: str = 'global'):
     )
     age_hours = max(0.1, (now - pub_time).total_seconds() / 3600.0)
 
-    base_score = 10.0
+    # Base gravity
     gravity = 1.2 if art['content_type'] == 'analysis' else 1.8
+    base_score = 10.0
 
     # Sentiment inference
     title_lower = art['title'].lower()
@@ -69,7 +85,7 @@ def rank_and_cluster_articles(raw_articles: list[dict], scope: str = 'global'):
         'perspectives': [],
     })
 
-  # Semantic Clustering across distinct outlets
+  # 1. Semantic Deduplication & Cross-Source Clustering
   clustered = []
   used_indices = set()
 
@@ -93,45 +109,65 @@ def rank_and_cluster_articles(raw_articles: list[dict], scope: str = 'global'):
         used_indices.add(j)
 
     prime['perspectives'] = cluster_matches
-    # Consensus boost
     distinct_sources = len({m['source_domain'] for m in cluster_matches})
-    prime['consensus_multiplier'] = 1.0 + (distinct_sources * 0.45)
+    prime['consensus_multiplier'] = 1.0 + (distinct_sources * 0.40)
+
+    # Compute baseline decay rank
+    raw_rank = (
+        prime['base_score'] * prime['consensus_multiplier']
+    ) / math.pow(prime['age_hours'] + 2, prime['gravity'])
+    prime['raw_rank'] = raw_rank
     clustered.append(prime)
 
-  # Final Score with Regional Balancing
-  domain_counts = defaultdict(int)
-  au_count_in_global = 0
-  ranked_results = []
+  # 2. Dynamic Fair-Share Quota Interleaving
+  if scope == 'au':
+    # Pure domestic focus
+    ranked = [a for a in clustered if a['region'] == 'AU']
+    ranked.sort(key=lambda x: x['raw_rank'], reverse=True)
+  else:
+    # GLOBAL BLENDED: Separate pools to guarantee representation
+    global_pool = [a for a in clustered if a['region'] != 'AU']
+    au_pool = [a for a in clustered if a['region'] == 'AU']
 
-  # Sort roughly by raw freshness/score first
-  clustered.sort(
-      key=lambda x: (x['base_score'] * x['consensus_multiplier'])
-      / math.pow(x['age_hours'] + 2, x['gravity']),
-      reverse=True,
-  )
+    global_pool.sort(key=lambda x: x['raw_rank'], reverse=True)
+    au_pool.sort(key=lambda x: x['raw_rank'], reverse=True)
 
-  for item in clustered:
-    raw_rank = (item['base_score'] * item['consensus_multiplier']) / math.pow(
-        item['age_hours'] + 2, item['gravity']
-    )
+    ranked = []
+    g_idx, a_idx = 0, 0
+    domain_counts = defaultdict(int)
 
-    # Regional Throttling
-    if scope == 'global' and item['region'] == 'AU':
-      raw_rank *= 0.35 * (0.60**au_count_in_global)
-      au_count_in_global += 1
+    # Max 1 AU story per 5 total stories (20% ceiling)
+    while g_idx < len(global_pool) or a_idx < len(au_pool):
+      au_count = sum(1 for r in ranked if r['region'] == 'AU')
+      au_ratio = au_count / max(1, len(ranked))
 
-    # Domain Saturation Penalty
-    d_count = domain_counts[item['source_domain']]
-    if d_count >= 2:
-      raw_rank *= 0.70 ** (d_count - 1)
-    domain_counts[item['source_domain']] += 1
+      # Choose an AU story only if below 20% quota, otherwise prioritize global
+      pick_au = False
+      if a_idx < len(au_pool) and (au_ratio < 0.20 or g_idx >= len(global_pool)):
+        pick_au = True
 
-    item['final_score'] = round(raw_rank * 10, 1)
-    item.pop('tokens', None)  # Clean out sets for JSON serialization
-    for p in item['perspectives']:
+      if pick_au:
+        candidate = au_pool[a_idx]
+        a_idx += 1
+      elif g_idx < len(global_pool):
+        candidate = global_pool[g_idx]
+        g_idx += 1
+      else:
+        candidate = au_pool[a_idx]
+        a_idx += 1
+
+      # Publisher saturation penalty
+      d_count = domain_counts[candidate['source_domain']]
+      penalty = 0.75**d_count
+      domain_counts[candidate['source_domain']] += 1
+
+      candidate['final_score'] = round(candidate['raw_rank'] * penalty * 10, 1)
+      ranked.append(candidate)
+
+  # Clean token sets for JSON serialization
+  for item in ranked:
+    item.pop('tokens', None)
+    for p in item.get('perspectives', []):
       p.pop('tokens', None)
 
-    ranked_results.append(item)
-
-  ranked_results.sort(key=lambda x: x['final_score'], reverse=True)
-  return ranked_results
+  return ranked
