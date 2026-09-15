@@ -1,0 +1,68 @@
+FEEDS = [
+    # Australian Outlets
+    {
+        "name": "ABC News AU",
+        "domain": "abc.net.au",
+        "url": "https://www.abc.net.au/news/feed/51120/rss.xml",
+        "region": "AU",
+        "category": "Broadsheet",
+        "weight": 8,
+    },
+    {
+        "name": "Sydney Morning Herald",
+        "domain": "smh.com.au",
+        "url": "https://www.smh.com.au/rss/feed.xml",
+        "region": "AU",
+        "category": "Broadsheet",
+        "weight": 7,
+    },
+    {
+        "name": "The Guardian Australia",
+        "domain": "theguardian.com",
+        "url": "https://www.theguardian.com/australia-news/rss",
+        "region": "AU",
+        "category": "Broadsheet",
+        "weight": 7,
+    },
+    {
+        "name": "AFR Economy",
+        "domain": "afr.com",
+        "url": "https://www.afr.com/rss/policy/economy",
+        "region": "AU",
+        "category": "Economy",
+        "weight": 9,
+    },
+    # Global Economic & Broadsheet Outlets
+    {
+        "name": "Reuters Business",
+        "domain": "reuters.com",
+        "url": "https://www.reutersagency.com/feed/?best-topics=business-finance&post_type=best",
+        "region": "GLOBAL",
+        "category": "Economy",
+        "weight": 10,
+    },
+    {
+        "name": "BBC World News",
+        "domain": "bbc.com",
+        "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+        "region": "GLOBAL",
+        "category": "Broadsheet",
+        "weight": 8,
+    },
+    {
+        "name": "Financial Times",
+        "domain": "ft.com",
+        "url": "https://www.ft.com/global-economy?format=rss",
+        "region": "GLOBAL",
+        "category": "Economy",
+        "weight": 9,
+    },
+    {
+        "name": "The Economist",
+        "domain": "economist.com",
+        "url": "https://www.economist.com/finance-and-economics/rss.xml",
+        "region": "GLOBAL",
+        "category": "Economy",
+        "weight": 9,
+    },
+]
