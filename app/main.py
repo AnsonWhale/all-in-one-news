@@ -9,11 +9,6 @@ from .database import get_db, init_db, prune_old_articles
 from .fetcher import sync_all_feeds
 from .ranker import rank_and_cluster_articles
 
-# Ping fast without checking database queries
-@app.get("/health")
-def health_check():
-  return {"status": "ok"}
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize DB tables & WAL mode
@@ -53,6 +48,10 @@ app.add_middleware(
     allow_headers=['*'],
 )
 
+# Ping fast without checking database queries
+@app.get("/health")
+def health_check():
+  return {"status": "ok"}
 
 @app.get('/api/news')
 def get_ranked_news(
