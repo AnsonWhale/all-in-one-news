@@ -1,27 +1,841 @@
-async function loadLiveHeadlines() {
-  const scopeParam = state.scope; // 'au' or 'global'
-  const timeParam = state.timeFrame; // 'daily' or 'weekly'
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>All in One | Real-Time News Intelligence</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            serif: ['Newsreader', 'serif'],
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .word-cloud-token {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: inline-block;
+      cursor: pointer;
+      user-select: none;
+      line-height: 1.15;
+    }
+    .word-cloud-token:hover {
+      transform: translateY(-2px) scale(1.08);
+      filter: drop-shadow(0 4px 12px rgba(56, 189, 248, 0.35));
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .perspective-drawer {
+      transition: max-height 0.35s ease-in-out, opacity 0.3s ease-in-out;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans selection:bg-sky-500/30 selection:text-sky-200">
 
-  try {
-    const res = await fetch(`/api/news?scope=${scopeParam}&time_frame=${timeParam}`);
-    const data = await res.json();
-    state.articles = data.articles;
-    renderApp();
-  } catch (err) {
-    console.error("Failed fetching live feeds:", err);
-  }
-}
+  <!-- TOP BAR -->
+  <header class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      
+      <!-- Brand -->
+      <div class="flex items-center gap-3">
+        <div class="h-9 w-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center font-serif text-xl font-bold text-white shadow-lg shadow-sky-500/20">
+          A
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-serif text-xl font-bold tracking-tight text-white">All in One</h1>
+            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-sky-500/10 text-sky-400 border border-sky-500/20">LIVE</span>
+          </div>
+          <p class="text-[11px] text-slate-400 hidden sm:block">Real-Time News Consensus Engine</p>
+        </div>
+      </div>
 
-// Re-fetch whenever sliders change
-window.setScope = function(scope) {
-  state.scope = scope;
-  loadLiveHeadlines();
-};
+      <!-- Controls & Actions -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Search -->
+        <div class="relative hidden md:block">
+          <input 
+            type="text" 
+            id="searchInput"
+            placeholder="Search topic or press '/'..." 
+            class="bg-slate-900/90 text-xs text-slate-200 rounded-lg pl-8 pr-3 py-1.5 w-52 focus:w-64 focus:outline-none focus:ring-1 focus:ring-sky-500 border border-slate-800 transition-all placeholder:text-slate-500 font-mono"
+          />
+          <svg class="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+        </div>
 
-window.setTimeFrame = function(tf) {
-  state.timeFrame = tf;
-  loadLiveHeadlines();
-};
+        <!-- Bookmarks Drawer Button -->
+        <button onclick="toggleBookmarksModal(true)" class="relative p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+          </svg>
+          <span id="bookmarkBadge" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-sky-500 rounded-full text-[9px] font-bold flex items-center justify-center text-white">0</span>
+        </button>
 
-// Initial load
-loadLiveHeadlines();
+        <!-- Preferences / Topic Settings -->
+        <button onclick="togglePreferencesModal(true)" class="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+          </svg>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN SCROLLER -->
+  <main class="flex-1 overflow-y-auto custom-scroll">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+      <!-- SLIDERS & CONTROLS DASHBOARD -->
+      <section class="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-4 sm:p-5">
+        <div class="flex flex-col lg:flex-row items-center justify-between gap-4">
+          
+          <!-- Dual Sliders / Segmented Pills -->
+          <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+            
+            <!-- Regional Scope -->
+            <div class="bg-slate-950 p-1 rounded-xl border border-slate-800 flex items-center flex-1 sm:flex-initial">
+              <button 
+                id="btnScopeAU" 
+                onclick="setScope('au')" 
+                class="px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-400 hover:text-slate-200">
+                🇦🇺 Australia Focus
+              </button>
+              <button 
+                id="btnScopeGlobal" 
+                onclick="setScope('global')" 
+                class="px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-sky-500 text-white shadow-sm font-semibold">
+                🌐 Global Blended
+              </button>
+            </div>
+
+            <!-- Time Horizon -->
+            <div class="bg-slate-950 p-1 rounded-xl border border-slate-800 flex items-center flex-1 sm:flex-initial">
+              <button 
+                id="btnTimeDaily" 
+                onclick="setTimeFrame('daily')" 
+                class="px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-slate-800 text-white font-semibold">
+                ⚡ 24 Hours
+              </button>
+              <button 
+                id="btnTimeWeekly" 
+                onclick="setTimeFrame('weekly')" 
+                class="px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-400 hover:text-slate-200">
+                📅 7 Days
+              </button>
+            </div>
+
+          </div>
+
+          <!-- View Toggle & Secondary Actions -->
+          <div class="flex items-center justify-between w-full lg:w-auto gap-3">
+            <!-- Active Keyword Filter Pill (Hidden by default) -->
+            <div id="activeKeywordBadge" class="hidden items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-500/20 text-sky-300 border border-sky-500/30 text-xs font-mono">
+              <span id="activeKeywordText">topic</span>
+              <button onclick="clearKeywordFilter()" class="hover:text-white ml-1">✕</button>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <!-- View Toggle (Card vs List) -->
+              <div class="bg-slate-950 p-1 rounded-xl border border-slate-800 flex items-center">
+                <button 
+                  id="btnViewCard" 
+                  onclick="setViewMode('card')" 
+                  title="Card View (V)" 
+                  class="p-1.5 rounded-lg text-xs transition-all bg-slate-800 text-white">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                  </svg>
+                </button>
+                <button 
+                  id="btnViewList" 
+                  onclick="setViewMode('list')" 
+                  title="List View (V)" 
+                  class="p-1.5 rounded-lg text-xs transition-all text-slate-400 hover:text-slate-200">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Restore Dismissed -->
+              <button 
+                id="btnRestoreDismissed" 
+                onclick="restoreDismissed()" 
+                class="hidden text-xs text-slate-400 hover:text-slate-200 underline font-mono px-2 py-1">
+                Restore (<span id="dismissedCount">0</span>)
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Pinned Topics Strip -->
+        <div id="pinnedTopicsBar" class="mt-3 pt-3 border-t border-slate-800/60 flex items-center gap-2 overflow-x-auto text-xs font-mono">
+          <span class="text-slate-500 whitespace-nowrap">PINNED:</span>
+          <div id="pinnedTopicsContainer" class="flex items-center gap-1.5">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- AUTHENTIC ORGANIC WORD CLOUD -->
+      <section class="bg-slate-900/30 border border-slate-800/80 rounded-2xl p-5 relative overflow-hidden">
+        <div class="flex items-center justify-between mb-3 border-b border-slate-800/60 pb-2">
+          <span class="text-[11px] font-mono uppercase tracking-widest text-slate-400 font-semibold flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Semantic Heatmap
+          </span>
+          <span class="text-[10px] font-mono text-slate-500">Click any keyword to filter stories</span>
+        </div>
+        
+        <div id="wordCloudContainer" class="flex flex-wrap items-baseline justify-center gap-x-4 gap-y-2 py-3 px-2 min-h-[110px] text-center">
+          <!-- Dynamically populated tokens -->
+        </div>
+      </section>
+
+      <!-- HEADLINES STREAM -->
+      <section>
+        <div class="flex items-center justify-between mb-4 px-1">
+          <div class="flex items-center gap-2">
+            <h2 class="text-base font-semibold text-slate-200">Curated Intelligence</h2>
+            <span id="articleCountBadge" class="text-xs font-mono text-slate-500">Loading feeds...</span>
+          </div>
+          <div class="flex items-center gap-2 text-xs font-mono text-slate-400">
+            <span>SORT:</span>
+            <select id="sortSelect" onchange="handleSortChange(this.value)" class="bg-slate-900 border border-slate-800 rounded px-2 py-1 text-slate-200 focus:outline-none">
+              <option value="score">Algorithmic Consensus</option>
+              <option value="time">Latest Published</option>
+              <option value="perspectives">Most Multi-Source</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Container for cards or list -->
+        <div id="headlinesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Injected via JS -->
+        </div>
+
+        <div id="emptyState" class="hidden text-center py-16 text-slate-500 font-mono text-sm">
+          No stories matching current filters. Try changing topic, scope, or restoring dismissed items.
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- SAVED ARTICLES MODAL / DRAWER -->
+  <div id="bookmarksModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex justify-end">
+    <div class="w-full max-w-md bg-slate-900 h-full border-l border-slate-800 p-6 flex flex-col justify-between shadow-2xl">
+      <div>
+        <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+          <h3 class="font-serif text-lg font-bold text-white">Saved Reading List</h3>
+          <button onclick="toggleBookmarksModal(false)" class="text-slate-400 hover:text-white text-lg">✕</button>
+        </div>
+        <div id="bookmarksList" class="space-y-3 overflow-y-auto max-h-[70vh] custom-scroll">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+      <div class="border-t border-slate-800 pt-4 flex gap-2">
+        <button onclick="exportBookmarks('md')" class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-mono rounded text-slate-200">Export .MD</button>
+        <button onclick="exportBookmarks('json')" class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-mono rounded text-slate-200">Export .JSON</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREFERENCES / MUTING MODAL -->
+  <div id="preferencesModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="w-full max-w-lg bg-slate-900 rounded-2xl border border-slate-800 p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="font-serif text-lg font-bold text-white">Feed Preferences</h3>
+        <button onclick="togglePreferencesModal(false)" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+      
+      <!-- Pinned Topics Management -->
+      <div>
+        <label class="text-xs font-mono uppercase text-slate-400 block mb-1">Pin Custom Topics (+3.5 Score Boost)</label>
+        <div class="flex gap-2">
+          <input type="text" id="newTopicInput" placeholder="e.g. Semiconductors, Central Banks" class="flex-1 bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-xs text-white" />
+          <button onclick="addPinnedTopic()" class="px-3 py-1.5 bg-sky-600 text-xs rounded text-white font-medium">Add</button>
+        </div>
+        <div id="prefPinnedList" class="flex flex-wrap gap-1.5 mt-2"></div>
+      </div>
+
+      <!-- Muted Keywords -->
+      <div class="pt-2 border-t border-slate-800/60">
+        <label class="text-xs font-mono uppercase text-slate-400 block mb-1">Mute Specific Keywords</label>
+        <div class="flex gap-2">
+          <input type="text" id="newMuteInput" placeholder="e.g. Gossip, Cricket" class="flex-1 bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-xs text-white" />
+          <button onclick="addMutedKeyword()" class="px-3 py-1.5 bg-rose-700 text-xs rounded text-white font-medium">Mute</button>
+        </div>
+        <div id="prefMutedList" class="flex flex-wrap gap-1.5 mt-2"></div>
+      </div>
+
+      <div class="text-right pt-3 border-t border-slate-800">
+        <button onclick="togglePreferencesModal(false)" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs rounded text-white">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- UNDO TOAST -->
+  <div id="undoToast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 border border-slate-700 shadow-xl rounded-xl px-4 py-3 flex items-center gap-3">
+    <span class="text-xs text-slate-300 font-medium">Story dismissed</span>
+    <button onclick="undoDismiss()" class="text-xs font-mono font-bold text-sky-400 hover:text-sky-300 underline">UNDO</button>
+  </div>
+
+  <!-- SCRIPT APPLICATION LOGIC -->
+  <script>
+    // State management
+    const state = {
+      scope: 'global', // 'au' or 'global'
+      timeFrame: 'daily', // 'daily' or 'weekly'
+      viewMode: 'card', // 'card' or 'list'
+      sortBy: 'score', // 'score', 'time', 'perspectives'
+      keywordFilter: null,
+      searchQuery: '',
+      articles: [],
+      dismissedIds: new Set(JSON.parse(localStorage.getItem('aio_dismissed') || '[]')),
+      bookmarks: new Map(JSON.parse(localStorage.getItem('aio_bookmarks') || '[]')),
+      pinnedTopics: new Set(JSON.parse(localStorage.getItem('aio_pinned') || '["Federal Reserve", "Semiconductors", "Commodities"]')),
+      mutedKeywords: new Set(JSON.parse(localStorage.getItem('aio_muted') || '[]')),
+      lastDismissedId: null
+    };
+
+    // Live API Fetch
+    async function loadLiveHeadlines() {
+      const badge = document.getElementById('articleCountBadge');
+      badge.textContent = 'Syncing feeds...';
+
+      try {
+        const response = await fetch(`/api/news?scope=${state.scope}&time_frame=${state.timeFrame}`);
+        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+        const data = await response.json();
+        
+        state.articles = data.articles || [];
+        renderApp();
+      } catch (err) {
+        console.warn('Backend unavailable, using offline cache fallback:', err);
+        // Fallback placeholder data if running standalone without backend yet
+        state.articles = getFallbackData();
+        renderApp();
+      }
+    }
+
+    function renderApp() {
+      renderPinnedBar();
+      renderWordCloud();
+      renderArticles();
+      updateBookmarkUI();
+      updateDismissedUI();
+    }
+
+    // Filter & Ranking Pipeline
+    function getProcessedArticles() {
+      return state.articles.filter(art => {
+        // Dismissed check
+        if (state.dismissedIds.has(art.id || art.url)) return false;
+
+        // Muted keywords check
+        const textToSearch = `${art.title} ${art.summary || ''}`.toLowerCase();
+        for (const muted of state.mutedKeywords) {
+          if (textToSearch.includes(muted.toLowerCase())) return false;
+        }
+
+        // Active Word Cloud Keyword Filter
+        if (state.keywordFilter && !textToSearch.includes(state.keywordFilter.toLowerCase())) {
+          return false;
+        }
+
+        // Text Search query
+        if (state.searchQuery && !textToSearch.includes(state.searchQuery.toLowerCase())) {
+          return false;
+        }
+
+        return true;
+      }).map(art => {
+        // Apply pinned bonus
+        let score = art.final_score || 10;
+        for (const topic of state.pinnedTopics) {
+          if (`${art.title} ${art.summary}`.toLowerCase().includes(topic.toLowerCase())) {
+            score += 3.5;
+          }
+        }
+        return { ...art, dynamicScore: Math.round(score * 10) / 10 };
+      }).sort((a, b) => {
+        if (state.sortBy === 'time') return new Date(b.published_at) - new Date(a.published_at);
+        if (state.sortBy === 'perspectives') return (b.perspectives?.length || 0) - (a.perspectives?.length || 0);
+        return b.dynamicScore - a.dynamicScore;
+      });
+    }
+
+    // Render Articles (Card / List Switch)
+    function renderArticles() {
+      const container = document.getElementById('headlinesContainer');
+      const emptyState = document.getElementById('emptyState');
+      const items = getProcessedArticles();
+
+      document.getElementById('articleCountBadge').textContent = `${items.length} stories available`;
+
+      if (items.length === 0) {
+        container.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      emptyState.classList.add('hidden');
+
+      if (state.viewMode === 'card') {
+        container.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
+        container.innerHTML = items.map(art => renderCardHTML(art)).join('');
+      } else {
+        container.className = 'flex flex-col gap-2.5';
+        container.innerHTML = items.map(art => renderListRowHTML(art)).join('');
+      }
+    }
+
+    function renderCardHTML(art) {
+      const isSaved = state.bookmarks.has(art.url);
+      const toneBorder = art.tone === 'bullish' ? 'border-l-emerald-500' : art.tone === 'caution' ? 'border-l-rose-500' : 'border-l-sky-500';
+      const hasPerspectives = art.perspectives && art.perspectives.length > 0;
+      const readMinutes = Math.max(2, Math.ceil((art.summary?.length || 100) / 75));
+
+      return `
+        <article class="bg-slate-900/70 hover:bg-slate-900 border border-slate-800 hover:border-slate-700/80 rounded-xl p-4 flex flex-col justify-between transition-all border-l-4 ${toneBorder} relative group shadow-sm">
+          <div>
+            <!-- Header Meta -->
+            <div class="flex items-center justify-between gap-2 mb-2 font-mono text-[11px] text-slate-400">
+              <span class="font-semibold text-slate-300 truncate">${art.source_name}</span>
+              <div class="flex items-center gap-1.5">
+                <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px] uppercase">${art.content_type || 'wire'}</span>
+                <span class="text-slate-500 font-mono text-[10px]">${readMinutes}m read</span>
+                <span class="px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 text-[10px] font-bold border border-sky-500/20" title="Consensus Score">${art.dynamicScore}</span>
+              </div>
+            </div>
+
+            <!-- Title -->
+            <h3 class="font-serif text-lg font-bold leading-snug text-slate-100 hover:text-sky-300 transition-colors mb-2">
+              <a href="${art.url}" target="_blank" rel="noopener noreferrer">${art.title}</a>
+            </h3>
+
+            <!-- Teaser -->
+            <p class="text-xs text-slate-400 leading-relaxed line-clamp-3 mb-3 font-sans">
+              ${art.summary || 'Summary unavailable.'}
+            </p>
+          </div>
+
+          <div>
+            <!-- Perspectives Drawer -->
+            ${hasPerspectives ? `
+              <div class="pt-2 border-t border-slate-800/80 mb-3">
+                <button onclick="togglePerspectives('${art.id || art.url}')" class="text-[11px] font-mono text-indigo-400 hover:text-indigo-300 flex items-center justify-between w-full">
+                  <span>+ ${art.perspectives.length} other perspectives</span>
+                  <span>▾</span>
+                </button>
+                <div id="perspectives-${art.id || art.url}" class="hidden mt-2 space-y-1.5 bg-slate-950/60 p-2 rounded-lg border border-slate-800 text-xs">
+                  ${art.perspectives.map(p => `
+                    <div class="flex items-baseline justify-between gap-2 border-b border-slate-800/40 pb-1 last:border-0">
+                      <span class="text-[10px] font-mono text-slate-400 font-semibold">${p.source_name}:</span>
+                      <a href="${p.url}" target="_blank" class="text-slate-300 hover:text-sky-300 text-[11px] truncate flex-1">${p.title}</a>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Bottom Actions -->
+            <div class="flex items-center justify-between pt-2 border-t border-slate-800/60 text-slate-400">
+              <div class="flex items-center gap-1">
+                <button onclick="toggleBookmark('${encodeURIComponent(JSON.stringify(art))}')" title="Save Bookmark" class="p-1.5 rounded hover:bg-slate-800 hover:text-white ${isSaved ? 'text-sky-400' : ''}">
+                  <svg class="w-4 h-4" fill="${isSaved ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+                </button>
+                <button onclick="shareArticle('${art.title}', '${art.url}')" title="Share" class="p-1.5 rounded hover:bg-slate-800 hover:text-white">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                </button>
+              </div>
+
+              <button onclick="dismissArticle('${art.id || art.url}')" title="Dismiss" class="text-xs font-mono text-slate-500 hover:text-rose-400 px-2 py-1 rounded hover:bg-rose-500/10 transition-colors">
+                Dismiss ✕
+              </button>
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderListRowHTML(art) {
+      const isSaved = state.bookmarks.has(art.url);
+      const hasPerspectives = art.perspectives && art.perspectives.length > 0;
+      const toneColor = art.tone === 'bullish' ? 'bg-emerald-400' : art.tone === 'caution' ? 'bg-rose-400' : 'bg-sky-400';
+
+      return `
+        <div class="bg-slate-900/60 hover:bg-slate-900 border border-slate-800 rounded-lg p-3 transition-all flex flex-col gap-2">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2 min-w-0 flex-1">
+              <span class="w-1.5 h-1.5 rounded-full ${toneColor} flex-shrink-0"></span>
+              <span class="text-[11px] font-mono text-slate-400 w-24 flex-shrink-0 truncate">${art.source_name}</span>
+              <a href="${art.url}" target="_blank" class="font-serif text-sm font-semibold text-slate-200 hover:text-sky-300 truncate">${art.title}</a>
+            </div>
+
+            <div class="flex items-center gap-3 flex-shrink-0">
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 font-bold border border-sky-500/20">${art.dynamicScore}</span>
+              ${hasPerspectives ? `
+                <button onclick="togglePerspectives('${art.id || art.url}')" class="text-[11px] font-mono text-indigo-400 hover:text-indigo-300">
+                  +${art.perspectives.length} views
+                </button>
+              ` : ''}
+              <button onclick="toggleBookmark('${encodeURIComponent(JSON.stringify(art))}')" class="text-slate-400 hover:text-white ${isSaved ? 'text-sky-400' : ''}">★</button>
+              <button onclick="dismissArticle('${art.id || art.url}')" class="text-slate-500 hover:text-rose-400 text-xs">✕</button>
+            </div>
+          </div>
+
+          ${hasPerspectives ? `
+            <div id="perspectives-${art.id || art.url}" class="hidden pl-6 py-1 border-l-2 border-slate-800 space-y-1 text-xs">
+              ${art.perspectives.map(p => `
+                <div class="flex items-center gap-2 font-mono text-[11px]">
+                  <span class="text-slate-500">${p.source_name}:</span>
+                  <a href="${p.url}" target="_blank" class="text-slate-300 hover:text-sky-300 truncate">${p.title}</a>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    // Authentic Word Cloud Calculation
+    function renderWordCloud() {
+      const container = document.getElementById('wordCloudContainer');
+      const stopWords = new Set(['the','and','for','that','with','from','this','will','amid','after','says','about','into','over','more','their','than','year','market']);
+      const wordCounts = {};
+
+      const items = state.articles.filter(a => !state.dismissedIds.has(a.id || a.url));
+      items.forEach(a => {
+        const tokens = (`${a.title} ${a.summary || ''}`).toLowerCase().match(/\b[a-zA-Z]{3,}\b/g) || [];
+        tokens.forEach(t => {
+          if (!stopWords.has(t)) {
+            wordCounts[t] = (wordCounts[t] || 0) + 1;
+          }
+        });
+      });
+
+      const sortedWords = Object.entries(wordCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 32);
+
+      if (sortedWords.length === 0) {
+        container.innerHTML = '<span class="text-xs font-mono text-slate-500">Awaiting headline data...</span>';
+        return;
+      }
+
+      const maxCount = sortedWords[0][1];
+      const minCount = sortedWords[sortedWords.length - 1][1];
+
+      container.innerHTML = sortedWords.map(([word, count]) => {
+        // Dramatic size scaling: 11px (0.7rem) to 52px (3.25rem)
+        const weight = minCount === maxCount ? 1 : (count - minCount) / (maxCount - minCount);
+        const fontSizeRem = 0.75 + (weight * 2.5);
+        const fontWeight = Math.round(400 + (weight * 500));
+        const opacity = 0.55 + (weight * 0.45);
+        const colorClass = weight > 0.65 ? 'text-sky-300' : weight > 0.35 ? 'text-indigo-300' : 'text-slate-400';
+
+        return `
+          <span 
+            onclick="setKeywordFilter('${word}')" 
+            class="word-cloud-token ${colorClass}"
+            style="font-size: ${fontSizeRem.toFixed(2)}rem; font-weight: ${fontWeight}; opacity: ${opacity};"
+            title="${count} references across feeds">
+            ${word}
+          </span>
+        `;
+      }).join(' ');
+    }
+
+    // Controls & State Setters
+    window.setScope = function(scope) {
+      state.scope = scope;
+      document.getElementById('btnScopeAU').className = scope === 'au' ? 'px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-sky-500 text-white font-semibold' : 'px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-400 hover:text-slate-200';
+      document.getElementById('btnScopeGlobal').className = scope === 'global' ? 'px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-sky-500 text-white font-semibold' : 'px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-400 hover:text-slate-200';
+      loadLiveHeadlines();
+    };
+
+    window.setTimeFrame = function(tf) {
+      state.timeFrame = tf;
+      document.getElementById('btnTimeDaily').className = tf === 'daily' ? 'px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-slate-800 text-white font-semibold' : 'px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-400 hover:text-slate-200';
+      document.getElementById('btnTimeWeekly').className = tf === 'weekly' ? 'px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-slate-800 text-white font-semibold' : 'px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-400 hover:text-slate-200';
+      loadLiveHeadlines();
+    };
+
+    window.setViewMode = function(mode) {
+      state.viewMode = mode;
+      document.getElementById('btnViewCard').className = mode === 'card' ? 'p-1.5 rounded-lg text-xs transition-all bg-slate-800 text-white' : 'p-1.5 rounded-lg text-xs transition-all text-slate-400 hover:text-slate-200';
+      document.getElementById('btnViewList').className = mode === 'list' ? 'p-1.5 rounded-lg text-xs transition-all bg-slate-800 text-white' : 'p-1.5 rounded-lg text-xs transition-all text-slate-400 hover:text-slate-200';
+      renderArticles();
+    };
+
+    window.handleSortChange = function(val) {
+      state.sortBy = val;
+      renderArticles();
+    };
+
+    window.setKeywordFilter = function(word) {
+      state.keywordFilter = word;
+      const badge = document.getElementById('activeKeywordBadge');
+      document.getElementById('activeKeywordText').textContent = `#${word}`;
+      badge.classList.remove('hidden');
+      badge.classList.add('flex');
+      renderArticles();
+    };
+
+    window.clearKeywordFilter = function() {
+      state.keywordFilter = null;
+      const badge = document.getElementById('activeKeywordBadge');
+      badge.classList.add('hidden');
+      badge.classList.remove('flex');
+      renderArticles();
+    };
+
+    window.togglePerspectives = function(id) {
+      const el = document.getElementById(`perspectives-${id}`);
+      if (el) el.classList.toggle('hidden');
+    };
+
+    // Client Dismissal & Undo
+    window.dismissArticle = function(id) {
+      state.dismissedIds.add(id);
+      state.lastDismissedId = id;
+      localStorage.setItem('aio_dismissed', JSON.stringify(Array.from(state.dismissedIds)));
+      
+      const toast = document.getElementById('undoToast');
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 4500);
+
+      renderApp();
+    };
+
+    window.undoDismiss = function() {
+      if (state.lastDismissedId) {
+        state.dismissedIds.delete(state.lastDismissedId);
+        state.lastDismissedId = null;
+        localStorage.setItem('aio_dismissed', JSON.stringify(Array.from(state.dismissedIds)));
+        document.getElementById('undoToast').classList.add('translate-y-20', 'opacity-0');
+        renderApp();
+      }
+    };
+
+    window.restoreDismissed = function() {
+      state.dismissedIds.clear();
+      localStorage.removeItem('aio_dismissed');
+      renderApp();
+    };
+
+    function updateDismissedUI() {
+      const btn = document.getElementById('btnRestoreDismissed');
+      const count = state.dismissedIds.size;
+      document.getElementById('dismissedCount').textContent = count;
+      btn.className = count > 0 ? 'text-xs text-slate-400 hover:text-slate-200 underline font-mono px-2 py-1' : 'hidden';
+    }
+
+    // Bookmarking Logic
+    window.toggleBookmark = function(encodedArt) {
+      const art = JSON.parse(decodeURIComponent(encodedArt));
+      if (state.bookmarks.has(art.url)) {
+        state.bookmarks.delete(art.url);
+      } else {
+        state.bookmarks.set(art.url, art);
+      }
+      localStorage.setItem('aio_bookmarks', JSON.stringify(Array.from(state.bookmarks.entries())));
+      renderArticles();
+      updateBookmarkUI();
+    };
+
+    function updateBookmarkUI() {
+      const count = state.bookmarks.size;
+      const badge = document.getElementById('bookmarkBadge');
+      badge.textContent = count;
+      badge.className = count > 0 ? 'absolute -top-1 -right-1 w-4 h-4 bg-sky-500 rounded-full text-[9px] font-bold flex items-center justify-center text-white' : 'hidden';
+
+      const container = document.getElementById('bookmarksList');
+      if (count === 0) {
+        container.innerHTML = '<p class="text-xs font-mono text-slate-500">No saved articles yet.</p>';
+        return;
+      }
+      container.innerHTML = Array.from(state.bookmarks.values()).map(b => `
+        <div class="p-3 bg-slate-950 border border-slate-800 rounded-lg text-xs space-y-1">
+          <span class="text-[10px] font-mono text-slate-500">${b.source_name}</span>
+          <h4 class="font-serif font-bold text-slate-200"><a href="${b.url}" target="_blank" class="hover:text-sky-300">${b.title}</a></h4>
+          <button onclick="toggleBookmark('${encodeURIComponent(JSON.stringify(b))}')" class="text-rose-400 hover:underline text-[10px] font-mono">Remove</button>
+        </div>
+      `).join('');
+    }
+
+    window.toggleBookmarksModal = function(show) {
+      document.getElementById('bookmarksModal').className = show ? 'fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex justify-end' : 'hidden';
+    };
+
+    window.togglePreferencesModal = function(show) {
+      document.getElementById('preferencesModal').className = show ? 'fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4' : 'hidden';
+      if (show) renderPreferencesUI();
+    };
+
+    // Pinned & Muting Logic
+    function renderPinnedBar() {
+      const container = document.getElementById('pinnedTopicsContainer');
+      container.innerHTML = Array.from(state.pinnedTopics).map(topic => `
+        <span onclick="setKeywordFilter('${topic}')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-sky-300 cursor-pointer text-[11px] font-medium border border-slate-700">
+          ${topic}
+        </span>
+      `).join('');
+    }
+
+    function renderPreferencesUI() {
+      document.getElementById('prefPinnedList').innerHTML = Array.from(state.pinnedTopics).map(p => `
+        <span class="px-2 py-1 bg-slate-800 rounded text-xs text-sky-300 flex items-center gap-1">
+          ${p} <button onclick="removePinnedTopic('${p}')" class="text-slate-500 hover:text-white">✕</button>
+        </span>
+      `).join('');
+      document.getElementById('prefMutedList').innerHTML = Array.from(state.mutedKeywords).map(m => `
+        <span class="px-2 py-1 bg-slate-800 rounded text-xs text-rose-300 flex items-center gap-1">
+          ${m} <button onclick="removeMutedKeyword('${m}')" class="text-slate-500 hover:text-white">✕</button>
+        </span>
+      `).join('');
+    }
+
+    window.addPinnedTopic = function() {
+      const val = document.getElementById('newTopicInput').value.trim();
+      if (val) {
+        state.pinnedTopics.add(val);
+        localStorage.setItem('aio_pinned', JSON.stringify(Array.from(state.pinnedTopics)));
+        document.getElementById('newTopicInput').value = '';
+        renderPreferencesUI();
+        renderApp();
+      }
+    };
+
+    window.removePinnedTopic = function(topic) {
+      state.pinnedTopics.delete(topic);
+      localStorage.setItem('aio_pinned', JSON.stringify(Array.from(state.pinnedTopics)));
+      renderPreferencesUI();
+      renderApp();
+    };
+
+    window.addMutedKeyword = function() {
+      const val = document.getElementById('newMuteInput').value.trim();
+      if (val) {
+        state.mutedKeywords.add(val);
+        localStorage.setItem('aio_muted', JSON.stringify(Array.from(state.mutedKeywords)));
+        document.getElementById('newMuteInput').value = '';
+        renderPreferencesUI();
+        renderApp();
+      }
+    };
+
+    window.removeMutedKeyword = function(keyword) {
+      state.mutedKeywords.delete(keyword);
+      localStorage.setItem('aio_muted', JSON.stringify(Array.from(state.mutedKeywords)));
+      renderPreferencesUI();
+      renderApp();
+    };
+
+    // Sharing & Export
+    window.shareArticle = function(title, url) {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(`${title} - ${url}`);
+        alert('Copied citation link to clipboard!');
+      }
+    };
+
+    window.exportBookmarks = function(format) {
+      const items = Array.from(state.bookmarks.values());
+      let dataStr = '';
+      let filename = `all-in-one-saved.${format}`;
+      if (format === 'json') {
+        dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(items, null, 2));
+      } else {
+        const md = items.map(i => `- [${i.title}](${i.url}) — *${i.source_name}*`).join('\n');
+        dataStr = "data:text/markdown;charset=utf-8," + encodeURIComponent(md);
+      }
+      const a = document.createElement('a');
+      a.setAttribute("href", dataStr);
+      a.setAttribute("download", filename);
+      a.click();
+    };
+
+    // Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      if (e.key === '/') {
+        e.preventDefault();
+        document.getElementById('searchInput').focus();
+      } else if (e.key.toLowerCase() === 'v') {
+        setViewMode(state.viewMode === 'card' ? 'list' : 'card');
+      }
+    });
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      state.searchQuery = e.target.value.trim();
+      renderArticles();
+    });
+
+    // Fallback seed data in case backend is spinning up
+    function getFallbackData() {
+      return [
+        {
+          id: 'fb-1',
+          title: 'Federal Reserve Holds Interest Rates Steady Amid Persistent Service Inflation',
+          summary: 'Policymakers signal rate paths remain dependent on incoming labor and services pricing data through the quarter.',
+          url: 'https://www.bloomberg.com/markets',
+          source_name: 'Bloomberg',
+          source_domain: 'bloomberg.com',
+          region: 'GLOBAL',
+          content_type: 'analysis',
+          final_score: 9.4,
+          tone: 'neutral',
+          published_at: new Date().toISOString(),
+          perspectives: [
+            { source_name: 'Financial Times', title: 'Global central banks diverge on rate trajectory', url: 'https://www.ft.com' }
+          ]
+        },
+        {
+          id: 'fb-2',
+          title: 'Reserve Bank of Australia Reviews Inflation Trends as Labor Market Remains Resilient',
+          summary: 'Domestic retail turnover figures and employment gains prompt debate on the RBA cash rate path.',
+          url: 'https://www.afr.com/policy/economy',
+          source_name: 'AFR Economy',
+          source_domain: 'afr.com',
+          region: 'AU',
+          content_type: 'wire',
+          final_score: 8.7,
+          tone: 'caution',
+          published_at: new Date().toISOString(),
+          perspectives: []
+        }
+      ];
+    }
+
+    // Boot
+    loadLiveHeadlines();
+  </script>
+</body>
+</html>
