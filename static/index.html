@@ -46,9 +46,6 @@
     .custom-scroll::-webkit-scrollbar-track {
       background: transparent;
     }
-    .perspective-drawer {
-      transition: max-height 0.35s ease-in-out, opacity 0.3s ease-in-out;
-    }
   </style>
 </head>
 <body class="h-full flex flex-col font-sans selection:bg-sky-500/30 selection:text-sky-200">
@@ -67,13 +64,12 @@
             <h1 class="font-serif text-xl font-bold tracking-tight text-white">All in One</h1>
             <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-sky-500/10 text-sky-400 border border-sky-500/20">LIVE</span>
           </div>
-          <p class="text-[11px] text-slate-400 hidden sm:block">Real-Time News Consensus Engine</p>
+          <p class="text-[11px] text-slate-400 hidden sm:block">Curated Algorithmic Consensus Engine</p>
         </div>
       </div>
 
       <!-- Controls & Actions -->
       <div class="flex items-center gap-2 sm:gap-3">
-        <!-- Search -->
         <div class="relative hidden md:block">
           <input 
             type="text" 
@@ -86,7 +82,6 @@
           </svg>
         </div>
 
-        <!-- Bookmarks Drawer Button -->
         <button onclick="toggleBookmarksModal(true)" class="relative p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700 transition-colors">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
@@ -94,7 +89,6 @@
           <span id="bookmarkBadge" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-sky-500 rounded-full text-[9px] font-bold flex items-center justify-center text-white">0</span>
         </button>
 
-        <!-- Preferences / Topic Settings -->
         <button onclick="togglePreferencesModal(true)" class="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700 transition-colors">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
@@ -113,9 +107,7 @@
       <section class="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-4 sm:p-5">
         <div class="flex flex-col lg:flex-row items-center justify-between gap-4">
           
-          <!-- Dual Sliders / Segmented Pills -->
           <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-            
             <!-- Regional Scope -->
             <div class="bg-slate-950 p-1 rounded-xl border border-slate-800 flex items-center flex-1 sm:flex-initial">
               <button 
@@ -127,7 +119,7 @@
               <button 
                 id="btnScopeGlobal" 
                 onclick="setScope('global')" 
-                class="px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-sky-500 text-white shadow-sm font-semibold">
+                class="px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-sky-500 text-white font-semibold shadow-sm">
                 🌐 Global Blended
               </button>
             </div>
@@ -147,19 +139,16 @@
                 📅 7 Days
               </button>
             </div>
-
           </div>
 
-          <!-- View Toggle & Secondary Actions -->
+          <!-- Active filters & View Toggles -->
           <div class="flex items-center justify-between w-full lg:w-auto gap-3">
-            <!-- Active Keyword Filter Pill (Hidden by default) -->
             <div id="activeKeywordBadge" class="hidden items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-500/20 text-sky-300 border border-sky-500/30 text-xs font-mono">
               <span id="activeKeywordText">topic</span>
               <button onclick="clearKeywordFilter()" class="hover:text-white ml-1">✕</button>
             </div>
 
             <div class="flex items-center gap-2">
-              <!-- View Toggle (Card vs List) -->
               <div class="bg-slate-950 p-1 rounded-xl border border-slate-800 flex items-center">
                 <button 
                   id="btnViewCard" 
@@ -181,7 +170,6 @@
                 </button>
               </div>
 
-              <!-- Restore Dismissed -->
               <button 
                 id="btnRestoreDismissed" 
                 onclick="restoreDismissed()" 
@@ -194,29 +182,24 @@
 
         </div>
 
-        <!-- Pinned Topics Strip -->
+        <!-- Pinned Strip -->
         <div id="pinnedTopicsBar" class="mt-3 pt-3 border-t border-slate-800/60 flex items-center gap-2 overflow-x-auto text-xs font-mono">
           <span class="text-slate-500 whitespace-nowrap">PINNED:</span>
-          <div id="pinnedTopicsContainer" class="flex items-center gap-1.5">
-            <!-- Injected via JS -->
-          </div>
+          <div id="pinnedTopicsContainer" class="flex items-center gap-1.5"></div>
         </div>
       </section>
 
-    <!-- AUTHENTIC ORGANIC WORD CLOUD (SPIRAL COLLISION) -->
-    <section class="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 relative overflow-hidden">
+      <!-- AUTHENTIC ORGANIC WORD CLOUD (SPIRAL COLLISION) -->
+      <section class="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 relative overflow-hidden">
         <div class="flex items-center justify-between mb-2 border-b border-slate-800/60 pb-2">
-            <span class="text-[11px] font-mono uppercase tracking-widest text-slate-400 font-semibold flex items-center gap-2">
+          <span class="text-[11px] font-mono uppercase tracking-widest text-slate-400 font-semibold flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Semantic Heatmap
-            </span>
-            <span id="cloudTermCount" class="text-[10px] font-mono text-slate-500">Calculating...</span>
+          </span>
+          <span id="cloudTermCount" class="text-[10px] font-mono text-slate-500">Calculating...</span>
         </div>
         
-        <!-- Canvas stage with fixed height and hidden overflow -->
-        <div id="wordCloudContainer" class="relative w-full h-64 sm:h-72 flex items-center justify-center overflow-hidden select-none">
-            <!-- Positioned absolutely via Archimedean spiral algorithm -->
-        </div>
-    </section>
+        <div id="wordCloudContainer" class="relative w-full h-64 sm:h-72 flex items-center justify-center overflow-hidden select-none"></div>
+      </section>
 
       <!-- HEADLINES STREAM -->
       <section>
@@ -235,20 +218,17 @@
           </div>
         </div>
 
-        <!-- Container for cards or list -->
-        <div id="headlinesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <!-- Injected via JS -->
-        </div>
+        <div id="headlinesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
 
         <div id="emptyState" class="hidden text-center py-16 text-slate-500 font-mono text-sm">
-          No stories matching current filters. Try changing topic, scope, or restoring dismissed items.
+          No stories matching current filters. Try resetting topic filters or scope.
         </div>
       </section>
 
     </div>
   </main>
 
-  <!-- SAVED ARTICLES MODAL / DRAWER -->
+  <!-- SAVED ARTICLES MODAL -->
   <div id="bookmarksModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex justify-end">
     <div class="w-full max-w-md bg-slate-900 h-full border-l border-slate-800 p-6 flex flex-col justify-between shadow-2xl">
       <div>
@@ -256,9 +236,7 @@
           <h3 class="font-serif text-lg font-bold text-white">Saved Reading List</h3>
           <button onclick="toggleBookmarksModal(false)" class="text-slate-400 hover:text-white text-lg">✕</button>
         </div>
-        <div id="bookmarksList" class="space-y-3 overflow-y-auto max-h-[70vh] custom-scroll">
-          <!-- Injected via JS -->
-        </div>
+        <div id="bookmarksList" class="space-y-3 overflow-y-auto max-h-[70vh] custom-scroll"></div>
       </div>
       <div class="border-t border-slate-800 pt-4 flex gap-2">
         <button onclick="exportBookmarks('md')" class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-mono rounded text-slate-200">Export .MD</button>
@@ -267,7 +245,7 @@
     </div>
   </div>
 
-  <!-- PREFERENCES / MUTING MODAL -->
+  <!-- PREFERENCES MODAL -->
   <div id="preferencesModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="w-full max-w-lg bg-slate-900 rounded-2xl border border-slate-800 p-6 space-y-4 shadow-2xl">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -275,9 +253,8 @@
         <button onclick="togglePreferencesModal(false)" class="text-slate-400 hover:text-white">✕</button>
       </div>
       
-      <!-- Pinned Topics Management -->
       <div>
-        <label class="text-xs font-mono uppercase text-slate-400 block mb-1">Pin Custom Topics (+3.5 Score Boost)</label>
+        <label class="text-xs font-mono uppercase text-slate-400 block mb-1">Pin Custom Topics (+1.5 Boost)</label>
         <div class="flex gap-2">
           <input type="text" id="newTopicInput" placeholder="e.g. Semiconductors, Central Banks" class="flex-1 bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-xs text-white" />
           <button onclick="addPinnedTopic()" class="px-3 py-1.5 bg-sky-600 text-xs rounded text-white font-medium">Add</button>
@@ -285,11 +262,10 @@
         <div id="prefPinnedList" class="flex flex-wrap gap-1.5 mt-2"></div>
       </div>
 
-      <!-- Muted Keywords -->
       <div class="pt-2 border-t border-slate-800/60">
         <label class="text-xs font-mono uppercase text-slate-400 block mb-1">Mute Specific Keywords</label>
         <div class="flex gap-2">
-          <input type="text" id="newMuteInput" placeholder="e.g. Gossip, Cricket" class="flex-1 bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-xs text-white" />
+          <input type="text" id="newMuteInput" placeholder="e.g. Gossip, Property" class="flex-1 bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-xs text-white" />
           <button onclick="addMutedKeyword()" class="px-3 py-1.5 bg-rose-700 text-xs rounded text-white font-medium">Mute</button>
         </div>
         <div id="prefMutedList" class="flex flex-wrap gap-1.5 mt-2"></div>
@@ -307,25 +283,24 @@
     <button onclick="undoDismiss()" class="text-xs font-mono font-bold text-sky-400 hover:text-sky-300 underline">UNDO</button>
   </div>
 
-  <!-- SCRIPT APPLICATION LOGIC -->
+  <!-- APPLICATION LOGIC -->
   <script>
-    // State management
     const state = {
-      scope: 'global', // 'au' or 'global'
-      timeFrame: 'daily', // 'daily' or 'weekly'
-      viewMode: 'card', // 'card' or 'list'
-      sortBy: 'score', // 'score', 'time', 'perspectives'
+      scope: 'global',
+      timeFrame: 'daily',
+      viewMode: 'card',
+      sortBy: 'score',
       keywordFilter: null,
       searchQuery: '',
       articles: [],
       dismissedIds: new Set(JSON.parse(localStorage.getItem('aio_dismissed') || '[]')),
       bookmarks: new Map(JSON.parse(localStorage.getItem('aio_bookmarks') || '[]')),
-      pinnedTopics: new Set(JSON.parse(localStorage.getItem('aio_pinned') || '["Federal Reserve", "Semiconductors", "Commodities"]')),
+      // Cleaned defaults to avoid unintended domestic bias
+      pinnedTopics: new Set(JSON.parse(localStorage.getItem('aio_pinned') || '["Semiconductors", "Central Banks"]')),
       mutedKeywords: new Set(JSON.parse(localStorage.getItem('aio_muted') || '[]')),
       lastDismissedId: null
     };
 
-    // Live API Fetch
     async function loadLiveHeadlines() {
       const badge = document.getElementById('articleCountBadge');
       badge.textContent = 'Syncing feeds...';
@@ -338,9 +313,7 @@
         state.articles = data.articles || [];
         renderApp();
       } catch (err) {
-        console.warn('Backend unavailable, using offline cache fallback:', err);
-        // Fallback placeholder data if running standalone without backend yet
-        state.articles = getFallbackData();
+        console.warn('Live API unreachable, check server:', err);
         renderApp();
       }
     }
@@ -353,35 +326,30 @@
       updateDismissedUI();
     }
 
-    // Filter & Ranking Pipeline
     function getProcessedArticles() {
       return state.articles.filter(art => {
-        // Dismissed check
         if (state.dismissedIds.has(art.id || art.url)) return false;
 
-        // Muted keywords check
         const textToSearch = `${art.title} ${art.summary || ''}`.toLowerCase();
         for (const muted of state.mutedKeywords) {
           if (textToSearch.includes(muted.toLowerCase())) return false;
         }
 
-        // Active Word Cloud Keyword Filter
         if (state.keywordFilter && !textToSearch.includes(state.keywordFilter.toLowerCase())) {
           return false;
         }
 
-        // Text Search query
         if (state.searchQuery && !textToSearch.includes(state.searchQuery.toLowerCase())) {
           return false;
         }
 
         return true;
       }).map(art => {
-        // Apply pinned bonus
-        let score = art.final_score || 10;
+        // Controlled client boost
+        let score = typeof art.final_score === 'number' ? art.final_score : 5.0;
         for (const topic of state.pinnedTopics) {
-          if (`${art.title} ${art.summary}`.toLowerCase().includes(topic.toLowerCase())) {
-            score += 3.5;
+          if (`${art.title} ${art.summary || ''}`.toLowerCase().includes(topic.toLowerCase())) {
+            score += 1.5;
           }
         }
         return { ...art, dynamicScore: Math.round(score * 10) / 10 };
@@ -392,7 +360,6 @@
       });
     }
 
-    // Render Articles (Card / List Switch)
     function renderArticles() {
       const container = document.getElementById('headlinesContainer');
       const emptyState = document.getElementById('emptyState');
@@ -423,31 +390,27 @@
       const readMinutes = Math.max(2, Math.ceil((art.summary?.length || 100) / 75));
 
       return `
-        <article class="bg-slate-900/70 hover:bg-slate-900 border border-slate-800 hover:border-slate-700/80 rounded-xl p-4 flex flex-col justify-between transition-all border-l-4 ${toneBorder} relative group shadow-sm">
+        <article class="bg-slate-900/70 hover:bg-slate-900 border border-slate-800 hover:border-slate-700/80 rounded-xl p-4 flex flex-col justify-between transition-all border-l-4 ${toneBorder} relative shadow-sm">
           <div>
-            <!-- Header Meta -->
             <div class="flex items-center justify-between gap-2 mb-2 font-mono text-[11px] text-slate-400">
               <span class="font-semibold text-slate-300 truncate">${art.source_name}</span>
               <div class="flex items-center gap-1.5">
                 <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px] uppercase">${art.content_type || 'wire'}</span>
-                <span class="text-slate-500 font-mono text-[10px]">${readMinutes}m read</span>
+                <span class="text-slate-500 font-mono text-[10px]">${readMinutes}m</span>
                 <span class="px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 text-[10px] font-bold border border-sky-500/20" title="Consensus Score">${art.dynamicScore}</span>
               </div>
             </div>
 
-            <!-- Title -->
             <h3 class="font-serif text-lg font-bold leading-snug text-slate-100 hover:text-sky-300 transition-colors mb-2">
               <a href="${art.url}" target="_blank" rel="noopener noreferrer">${art.title}</a>
             </h3>
 
-            <!-- Teaser -->
             <p class="text-xs text-slate-400 leading-relaxed line-clamp-3 mb-3 font-sans">
               ${art.summary || 'Summary unavailable.'}
             </p>
           </div>
 
           <div>
-            <!-- Perspectives Drawer -->
             ${hasPerspectives ? `
               <div class="pt-2 border-t border-slate-800/80 mb-3">
                 <button onclick="togglePerspectives('${art.id || art.url}')" class="text-[11px] font-mono text-indigo-400 hover:text-indigo-300 flex items-center justify-between w-full">
@@ -465,7 +428,6 @@
               </div>
             ` : ''}
 
-            <!-- Bottom Actions -->
             <div class="flex items-center justify-between pt-2 border-t border-slate-800/60 text-slate-400">
               <div class="flex items-center gap-1">
                 <button onclick="toggleBookmark('${encodeURIComponent(JSON.stringify(art))}')" title="Save Bookmark" class="p-1.5 rounded hover:bg-slate-800 hover:text-white ${isSaved ? 'text-sky-400' : ''}">
@@ -525,154 +487,150 @@
       `;
     }
 
-    // Authentic Word Cloud Calculation
+    // Normalized Archimedean Spiral Word Cloud
     function renderWordCloud() {
-        const container = document.getElementById('wordCloudContainer');
-        if (!container) return;
+      const container = document.getElementById('wordCloudContainer');
+      if (!container) return;
 
-        const activePool = state.articles.filter(a => !state.dismissedIds.has(a.id || a.url));
-        
-        if (activePool.length === 0) {
-            container.innerHTML = '<span class="text-xs font-mono text-slate-500">No articles available.</span>';
-            return;
-        }
+      const activePool = state.articles.filter(a => !state.dismissedIds.has(a.id || a.url));
+      if (activePool.length === 0) {
+        container.innerHTML = '<span class="text-xs font-mono text-slate-500">No articles in active slice.</span>';
+        return;
+      }
 
-        const stopWords = new Set([
-            'the','and','for','that','with','from','this','will','amid','after',
-            'says','about','into','over','more','their','than','year','market',
-            'have','been','were','also','could','under','first','per','what','some',
-            'australia','australian','global','record','high','low','report'
-        ]);
+      const stopWords = new Set([
+        'the','and','for','that','with','from','this','will','amid','after',
+        'says','about','into','over','more','their','than','year','market',
+        'have','been','were','also','could','under','first','per','what','some',
+        'australia','australian','global','record','high','low','report','today'
+      ]);
 
-        // Separate pools to compute normalized volume frequencies
-        const auArticles = activePool.filter(a => a.region === 'AU');
-        const globalArticles = activePool.filter(a => a.region !== 'AU');
+      const auArticles = activePool.filter(a => a.region === 'AU');
+      const globalArticles = activePool.filter(a => a.region !== 'AU');
 
-        const totalAU = Math.max(1, auArticles.length);
-        const totalGlobal = Math.max(1, globalArticles.length);
+      const totalAU = Math.max(1, auArticles.length);
+      const totalGlobal = Math.max(1, globalArticles.length);
 
-        // In Global mode, scale AU keyword influence to 20%
-        const auWeightModifier = state.scope === 'global' ? 0.20 : 1.0;
-        const globalWeightModifier = state.scope === 'au' ? 0.0 : 1.0;
+      // Scale AU vocabulary weight in Global mode
+      const auWeightModifier = state.scope === 'global' ? 0.20 : 1.0;
+      const globalWeightModifier = state.scope === 'au' ? 0.0 : 1.0;
 
-        const wordScores = {};
-        const wordSentiment = {};
+      const wordScores = {};
+      const wordSentiment = {};
 
-        function processPool(pool, poolTotal, modifier) {
-            if (modifier === 0) return;
-            pool.forEach(a => {
-            const text = `${a.title} ${a.summary || ''}`.toLowerCase();
-            const tokens = text.match(/\b[a-zA-Z]{4,}\b/g) || [];
-            const uniqueTokens = new Set(tokens);
+      function processPool(pool, poolTotal, modifier) {
+        if (modifier === 0) return;
+        pool.forEach(a => {
+          const text = `${a.title} ${a.summary || ''}`.toLowerCase();
+          const tokens = text.match(/\b[a-zA-Z]{4,}\b/g) || [];
+          const uniqueTokens = new Set(tokens);
 
-            uniqueTokens.forEach(t => {
-                if (!stopWords.has(t)) {
-                // Normalized Frequency: (1 / total articles in region) * mode modifier
-                const increment = (1 / poolTotal) * modifier;
-                wordScores[t] = (wordScores[t] || 0) + increment;
-                if (!wordSentiment[t] || a.tone !== 'neutral') {
-                    wordSentiment[t] = a.tone || 'neutral';
-                }
-                }
-            });
-            });
-        }
-
-        processPool(auArticles, totalAU, auWeightModifier);
-        processPool(globalArticles, totalGlobal, globalWeightModifier);
-
-        // Pick top 28 terms
-        const terms = Object.entries(wordScores)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 28);
-
-        const termCountBadge = document.getElementById('cloudTermCount');
-        if (termCountBadge) {
-            termCountBadge.textContent = `${terms.length} salient terms (${state.scope.toUpperCase()})`;
-        }
-
-        container.innerHTML = '';
-        const width = container.clientWidth || 800;
-        const height = container.clientHeight || 280;
-        const centerX = width / 2;
-        const centerY = height / 2;
-
-        const maxWeight = terms[0][1];
-        const minWeight = terms[terms.length - 1][1];
-        const placedBoxes = [];
-
-        function doesCollide(box1, box2) {
-            const pad = 4;
-            return !(
-            box1.x + box1.w + pad < box2.x ||
-            box1.x > box2.x + box2.w + pad ||
-            box1.y + box1.h + pad < box2.y ||
-            box1.y > box2.y + box2.h + pad
-            );
-        }
-
-        terms.forEach(([word, score]) => {
-            const relScore = maxWeight === minWeight ? 1 : (score - minWeight) / (maxWeight - minWeight);
-            const fontSize = Math.round(13 + (relScore * 30));
-            const fontWeight = relScore > 0.6 ? 700 : relScore > 0.3 ? 600 : 400;
-
-            const tone = wordSentiment[word];
-            let colorClass = 'text-slate-400 hover:text-white';
-            if (tone === 'bullish') colorClass = 'text-emerald-400 hover:text-emerald-200';
-            else if (tone === 'caution') colorClass = 'text-rose-400 hover:text-rose-200';
-            else if (relScore > 0.5) colorClass = 'text-sky-300 hover:text-sky-100';
-
-            const span = document.createElement('span');
-            span.className = `absolute cursor-pointer transition-transform duration-200 ${colorClass}`;
-            span.style.fontSize = `${fontSize}px`;
-            span.style.fontWeight = fontWeight;
-            span.style.fontFamily = 'Newsreader, serif';
-            span.style.whiteSpace = 'nowrap';
-            span.textContent = word;
-            span.onclick = () => setKeywordFilter(word);
-
-            container.appendChild(span);
-
-            const w = span.offsetWidth || (word.length * fontSize * 0.55);
-            const h = span.offsetHeight || (fontSize * 1.2);
-
-            let angle = Math.random() * 6.28;
-            let radius = 0;
-            const step = 0.35;
-            const maxRadius = Math.max(width, height) / 2;
-            let placed = false;
-
-            while (radius < maxRadius) {
-            const x = centerX + radius * Math.cos(angle) - (w / 2);
-            const y = centerY + (radius * 0.55) * Math.sin(angle) - (h / 2);
-
-            const candidateBox = { x, y, w, h };
-            let collision = false;
-
-            for (let i = 0; i < placedBoxes.length; i++) {
-                if (doesCollide(candidateBox, placedBoxes[i])) {
-                collision = true;
-                break;
-                }
+          uniqueTokens.forEach(t => {
+            if (!stopWords.has(t)) {
+              const increment = (1 / poolTotal) * modifier;
+              wordScores[t] = (wordScores[t] || 0) + increment;
+              if (!wordSentiment[t] || a.tone !== 'neutral') {
+                wordSentiment[t] = a.tone || 'neutral';
+              }
             }
-
-            if (!collision) {
-                span.style.left = `${Math.round(x)}px`;
-                span.style.top = `${Math.round(y)}px`;
-                placedBoxes.push(candidateBox);
-                placed = true;
-                break;
-            }
-
-            angle += step;
-            radius = 3.5 * angle;
-            }
-
-            if (!placed) span.style.display = 'none';
+          });
         });
+      }
+
+      processPool(auArticles, totalAU, auWeightModifier);
+      processPool(globalArticles, totalGlobal, globalWeightModifier);
+
+      const terms = Object.entries(wordScores)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 26);
+
+      const termCountBadge = document.getElementById('cloudTermCount');
+      if (termCountBadge) {
+        termCountBadge.textContent = `${terms.length} salient terms (${state.scope.toUpperCase()})`;
+      }
+
+      container.innerHTML = '';
+      const width = container.clientWidth || 800;
+      const height = container.clientHeight || 280;
+      const centerX = width / 2;
+      const centerY = height / 2;
+
+      const maxWeight = terms[0] ? terms[0][1] : 1;
+      const minWeight = terms[terms.length - 1] ? terms[terms.length - 1][1] : 0;
+      const placedBoxes = [];
+
+      function doesCollide(box1, box2) {
+        const pad = 4;
+        return !(
+          box1.x + box1.w + pad < box2.x ||
+          box1.x > box2.x + box2.w + pad ||
+          box1.y + box1.h + pad < box2.y ||
+          box1.y > box2.y + box2.h + pad
+        );
+      }
+
+      terms.forEach(([word, score]) => {
+        const relScore = maxWeight === minWeight ? 1 : (score - minWeight) / (maxWeight - minWeight);
+        const fontSize = Math.round(13 + (relScore * 28));
+        const fontWeight = relScore > 0.6 ? 700 : relScore > 0.3 ? 600 : 400;
+
+        const tone = wordSentiment[word];
+        let colorClass = 'text-slate-400 hover:text-white';
+        if (tone === 'bullish') colorClass = 'text-emerald-400 hover:text-emerald-200';
+        else if (tone === 'caution') colorClass = 'text-rose-400 hover:text-rose-200';
+        else if (relScore > 0.5) colorClass = 'text-sky-300 hover:text-sky-100';
+
+        const span = document.createElement('span');
+        span.className = `absolute cursor-pointer transition-transform duration-200 ${colorClass}`;
+        span.style.fontSize = `${fontSize}px`;
+        span.style.fontWeight = fontWeight;
+        span.style.fontFamily = 'Newsreader, serif';
+        span.style.whiteSpace = 'nowrap';
+        span.textContent = word;
+        span.onclick = () => setKeywordFilter(word);
+
+        container.appendChild(span);
+
+        const w = span.offsetWidth || (word.length * fontSize * 0.55);
+        const h = span.offsetHeight || (fontSize * 1.2);
+
+        let angle = Math.random() * 6.28;
+        let radius = 0;
+        const step = 0.35;
+        const maxRadius = Math.max(width, height) / 2;
+        let placed = false;
+
+        while (radius < maxRadius) {
+          const x = centerX + radius * Math.cos(angle) - (w / 2);
+          const y = centerY + (radius * 0.52) * Math.sin(angle) - (h / 2);
+
+          const candidateBox = { x, y, w, h };
+          let collision = false;
+
+          for (let i = 0; i < placedBoxes.length; i++) {
+            if (doesCollide(candidateBox, placedBoxes[i])) {
+              collision = true;
+              break;
+            }
+          }
+
+          if (!collision) {
+            span.style.left = `${Math.round(x)}px`;
+            span.style.top = `${Math.round(y)}px`;
+            placedBoxes.push(candidateBox);
+            placed = true;
+            break;
+          }
+
+          angle += step;
+          radius = 3.6 * angle;
+        }
+
+        if (!placed) span.style.display = 'none';
+      });
     }
 
-    // Controls & State Setters
+    // Setters & UI state
     window.setScope = function(scope) {
       state.scope = scope;
       document.getElementById('btnScopeAU').className = scope === 'au' ? 'px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-sky-500 text-white font-semibold' : 'px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-400 hover:text-slate-200';
@@ -721,7 +679,6 @@
       if (el) el.classList.toggle('hidden');
     };
 
-    // Client Dismissal & Undo
     window.dismissArticle = function(id) {
       state.dismissedIds.add(id);
       state.lastDismissedId = id;
@@ -757,7 +714,6 @@
       btn.className = count > 0 ? 'text-xs text-slate-400 hover:text-slate-200 underline font-mono px-2 py-1' : 'hidden';
     }
 
-    // Bookmarking Logic
     window.toggleBookmark = function(encodedArt) {
       const art = JSON.parse(decodeURIComponent(encodedArt));
       if (state.bookmarks.has(art.url)) {
@@ -799,7 +755,6 @@
       if (show) renderPreferencesUI();
     };
 
-    // Pinned & Muting Logic
     function renderPinnedBar() {
       const container = document.getElementById('pinnedTopicsContainer');
       container.innerHTML = Array.from(state.pinnedTopics).map(topic => `
@@ -858,7 +813,6 @@
       renderApp();
     };
 
-    // Sharing & Export
     window.shareArticle = function(title, url) {
       if (navigator.clipboard) {
         navigator.clipboard.writeText(`${title} - ${url}`);
@@ -882,7 +836,6 @@
       a.click();
     };
 
-    // Keyboard Shortcuts
     document.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT') return;
       if (e.key === '/') {
@@ -898,43 +851,7 @@
       renderArticles();
     });
 
-    // Fallback seed data in case backend is spinning up
-    function getFallbackData() {
-      return [
-        {
-          id: 'fb-1',
-          title: 'Federal Reserve Holds Interest Rates Steady Amid Persistent Service Inflation',
-          summary: 'Policymakers signal rate paths remain dependent on incoming labor and services pricing data through the quarter.',
-          url: 'https://www.bloomberg.com/markets',
-          source_name: 'Bloomberg',
-          source_domain: 'bloomberg.com',
-          region: 'GLOBAL',
-          content_type: 'analysis',
-          final_score: 9.4,
-          tone: 'neutral',
-          published_at: new Date().toISOString(),
-          perspectives: [
-            { source_name: 'Financial Times', title: 'Global central banks diverge on rate trajectory', url: 'https://www.ft.com' }
-          ]
-        },
-        {
-          id: 'fb-2',
-          title: 'Reserve Bank of Australia Reviews Inflation Trends as Labor Market Remains Resilient',
-          summary: 'Domestic retail turnover figures and employment gains prompt debate on the RBA cash rate path.',
-          url: 'https://www.afr.com/policy/economy',
-          source_name: 'AFR Economy',
-          source_domain: 'afr.com',
-          region: 'AU',
-          content_type: 'wire',
-          final_score: 8.7,
-          tone: 'caution',
-          published_at: new Date().toISOString(),
-          perspectives: []
-        }
-      ];
-    }
-
-    // Boot
+    // Initial load
     loadLiveHeadlines();
   </script>
 </body>
