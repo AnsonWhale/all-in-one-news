@@ -1,0 +1,27 @@
+async function loadLiveHeadlines() {
+  const scopeParam = state.scope; // 'au' or 'global'
+  const timeParam = state.timeFrame; // 'daily' or 'weekly'
+
+  try {
+    const res = await fetch(`/api/news?scope=${scopeParam}&time_frame=${timeParam}`);
+    const data = await res.json();
+    state.articles = data.articles;
+    renderApp();
+  } catch (err) {
+    console.error("Failed fetching live feeds:", err);
+  }
+}
+
+// Re-fetch whenever sliders change
+window.setScope = function(scope) {
+  state.scope = scope;
+  loadLiveHeadlines();
+};
+
+window.setTimeFrame = function(tf) {
+  state.timeFrame = tf;
+  loadLiveHeadlines();
+};
+
+// Initial load
+loadLiveHeadlines();
