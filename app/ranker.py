@@ -21,11 +21,39 @@ def calculate_jaccard_similarity(set_a: set[str], set_b: set[str]) -> float:
     return 0.0
   return len(set_a & set_b) / len(set_a | set_b)
 
-
-def rank_and_cluster_articles(raw_articles: list[dict], scope: str = 'global'):
+def rank_and_cluster_articles(
+    raw_articles: list[dict],
+    scope: str = 'global',
+    time_frame: str = 'daily'
+):
+  # ============================================================================
+  # SECTION 1: DYNAMIC HORIZON CONFIGURATION
+  # - In daily mode (24h), we want sharp gravity (1.6) so breaking, high-velocity
+  #   news rapidly overtakes older items.
+  # - In weekly mode (7d), steep gravity would bury 3-5 day old stories under trivial
+  #   single-source wires published an hour ago. We drop gravity to 0.70 so older
+  #   events stay competitive.
+  # - Consensus boost is elevated in weekly mode (0.85 vs 0.45) so week-defining
+  #   stories backed by 3+ outlets naturally rise to the top of the weekly digest.
+  # ============================================================================
   now = datetime.now(timezone.utc)
   processed = []
 
+  if time_frame == 'weekly':
+    base_gravity = 0.70
+    consensus_boost_factor = 0.85
+  else:
+    base_gravity = 1.60
+    consensus_boost_factor = 0.45
+
+  # ============================================================================
+  # SECTION 2: NORMALIZATION, METADATA ENRICHMENT & SENTIMENT
+  # - Calculate article age in hours, with a safe lower bound (0.2h) to avoid divide-by-zero.
+  # - Apply timezone softening to global stories (0.65x multiplier) so domestic daylight
+  #   publishing volume doesn't overpower overnight European and US market reports.
+  # - Apply a lighter gravity curve to 'analysis' deep-dives compared to breaking 'wires'.
+  # - Tokenize headlines into stopword-free word sets for semantic comparison.
+  # ============================================================================
   for art in raw_articles:
     pub_time = datetime.fromisoformat(art['published_at']).replace(
         tzinfo=timezone.utc
@@ -35,7 +63,8 @@ def rank_and_cluster_articles(raw_articles: list[dict], scope: str = 'global'):
     # Timezone buffer: Soften decay curve for overnight global stories
     effective_age = age_hours if art['region'] == 'AU' else max(1.0, age_hours * 0.65)
 
-    gravity = 1.15 if art['content_type'] == 'analysis' else 1.6
+    # Analytical articles retain shelf-life longer than standard wires
+    gravity = base_gravity * 0.80 if art['content_type'] == 'analysis' else base_gravity
     base_score = 10.0
 
     # Sentiment classification
@@ -57,7 +86,15 @@ def rank_and_cluster_articles(raw_articles: list[dict], scope: str = 'global'):
         'perspectives': [],
     })
 
-  # 1. Semantic Deduplication & Cross-Source Clustering
+  # ============================================================================
+  # SECTION 3: SEMANTIC DEDUPLICATION & CROSS-SOURCE CLUSTERING
+  # - Iterate over articles and compute Jaccard similarity across unique title tokens.
+  # - If similarity >= 0.35 across distinct publisher domains, group the secondary
+  #   story into the prime article's 'perspectives' list.
+  # - Mark grouped secondary stories as used so they don't repeat as independent cards.
+  # - Reward multi-source stories with a consensus multiplier. If in Global mode,
+  #   dampen domestic Australian-only consensus (0.12) to prevent local media echo chambers.
+  # ============================================================================
   clustered = []
   used_indices = set()
 
@@ -85,23 +122,32 @@ def rank_and_cluster_articles(raw_articles: list[dict], scope: str = 'global'):
     if scope == 'global' and prime['region'] == 'AU':
       prime['consensus_multiplier'] = 1.0 + (distinct_sources * 0.12)
     else:
-      prime['consensus_multiplier'] = 1.0 + (distinct_sources * 0.45)
+      prime['consensus_multiplier'] = 1.0 + (distinct_sources * consensus_boost_factor)
 
-    # Base decay rank
+    # Base decay rank calculated using the dynamic horizon gravity
     raw_rank = (prime['base_score'] * prime['consensus_multiplier']) / math.pow(
         prime['age_hours'] + 2, prime['gravity']
     )
     prime['raw_rank'] = raw_rank
     clustered.append(prime)
 
-  # 2. Ranking and Quota Interleaving
+  # ============================================================================
+  # SECTION 4: FAIR-SHARE QUOTA INTERLEAVING & PUBLISHER DIVERSITY
+  # - In AU scope: Deliver exclusively Australian articles sorted by raw decay rank.
+  # - In Global scope: Enforce a strict 20% ceiling on Australian stories so high domestic
+  #   publishing volume cannot overwhelm international coverage.
+  # - Apply an explicit score scale down (0.38x) to AU candidate scores in Global mode
+  #   so display badges visually match their actual lower priority.
+  # - Apply a publisher saturation penalty (0.75^count) to prevent any single domain
+  #   from monopolizing consecutive positions.
+  # ============================================================================
   if scope == 'au':
     ranked = [a for a in clustered if a['region'] == 'AU']
     ranked.sort(key=lambda x: x['raw_rank'], reverse=True)
     for a in ranked:
       a['final_score'] = round(a['raw_rank'] * 10, 1)
   else:
-    # GLOBAL BLENDED: Separate pools to guarantee balanced representation
+    # GLOBAL BLENDED: Separate pools to guarantee representation
     global_pool = [a for a in clustered if a['region'] != 'AU']
     au_pool = [a for a in clustered if a['region'] == 'AU']
 
@@ -125,8 +171,7 @@ def rank_and_cluster_articles(raw_articles: list[dict], scope: str = 'global'):
         candidate = au_pool[a_idx]
         a_idx += 1
         au_selected_count += 1
-        # Direct regional dampener for score display parity
-        regional_factor = 0.38
+        regional_factor = 0.38  # Direct score dampener in Global mode
       elif g_idx < len(global_pool):
         candidate = global_pool[g_idx]
         g_idx += 1
@@ -147,7 +192,11 @@ def rank_and_cluster_articles(raw_articles: list[dict], scope: str = 'global'):
       )
       ranked.append(candidate)
 
-  # Strip non-serializable sets
+  # ============================================================================
+  # SECTION 5: JSON SERIALIZATION CLEANUP
+  # - Python 'set' objects (used for fast token operations) cannot be serialized
+  #   to JSON by FastAPI / Pydantic. We pop them out before returning.
+  # ============================================================================
   for item in ranked:
     item.pop('tokens', None)
     for p in item.get('perspectives', []):

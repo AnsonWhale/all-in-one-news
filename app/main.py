@@ -60,6 +60,7 @@ def get_ranked_news(
 ):
   hours = 24 if time_frame == 'daily' else 168
   cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+  limit = 200 if time_frame == 'daily' else 750  # <-- Pull deeper for weekly
 
   with get_db() as conn:
     cursor = conn.cursor()
@@ -68,23 +69,24 @@ def get_ranked_news(
           """
                 SELECT * FROM articles 
                 WHERE published_at >= ? AND region = 'AU'
-                ORDER BY published_at DESC LIMIT 150
+                ORDER BY published_at DESC LIMIT ?
             """,
-          (cutoff,),
+          (cutoff, limit),
       )
     else:
       cursor.execute(
           """
                 SELECT * FROM articles 
                 WHERE published_at >= ?
-                ORDER BY published_at DESC LIMIT 200
+                ORDER BY published_at DESC LIMIT ?
             """,
-          (cutoff,),
+          (cutoff, limit),
       )
 
     rows = [dict(r) for r in cursor.fetchall()]
 
-  ranked = rank_and_cluster_articles(rows, scope=scope)
+  # Pass time_frame to the ranker
+  ranked = rank_and_cluster_articles(rows, scope=scope, time_frame=time_frame)
   return {'total': len(ranked), 'scope': scope, 'articles': ranked}
 
 
