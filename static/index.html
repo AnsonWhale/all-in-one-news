@@ -328,24 +328,37 @@
 
     function getProcessedArticles() {
       return state.articles.filter(art => {
-        if (state.dismissedIds.has(art.id || art.url)) return false;
+        // Check all possible identifier representations as strings
+        const artId = String(art.id ?? '');
+        const artGuid = String(art.guid_hash ?? '');
+        const artUrl = String(art.url ?? '');
 
+        if (
+          (artId && state.dismissedIds.has(artId)) ||
+          (artGuid && state.dismissedIds.has(artGuid)) ||
+          (artUrl && state.dismissedIds.has(artUrl))
+        ) {
+          return false;
+        }
+
+        // Muted keywords check
         const textToSearch = `${art.title} ${art.summary || ''}`.toLowerCase();
         for (const muted of state.mutedKeywords) {
           if (textToSearch.includes(muted.toLowerCase())) return false;
         }
 
+        // Active Word Cloud Keyword Filter
         if (state.keywordFilter && !textToSearch.includes(state.keywordFilter.toLowerCase())) {
           return false;
         }
 
+        // Text Search query
         if (state.searchQuery && !textToSearch.includes(state.searchQuery.toLowerCase())) {
           return false;
         }
 
         return true;
       }).map(art => {
-        // Controlled client boost
         let score = typeof art.final_score === 'number' ? art.final_score : 5.0;
         for (const topic of state.pinnedTopics) {
           if (`${art.title} ${art.summary || ''}`.toLowerCase().includes(topic.toLowerCase())) {
@@ -438,7 +451,7 @@
                 </button>
               </div>
 
-              <button onclick="dismissArticle('${art.id || art.url}')" title="Dismiss" class="text-xs font-mono text-slate-500 hover:text-rose-400 px-2 py-1 rounded hover:bg-rose-500/10 transition-colors">
+              <button onclick="dismissArticle('${art.guid_hash || art.id}')" title="Dismiss" class="text-xs font-mono text-slate-500 hover:text-rose-400 px-2 py-1 rounded hover:bg-rose-500/10 transition-colors">
                 Dismiss ✕
               </button>
             </div>
@@ -469,7 +482,7 @@
                 </button>
               ` : ''}
               <button onclick="toggleBookmark('${encodeURIComponent(JSON.stringify(art))}')" class="text-slate-400 hover:text-white ${isSaved ? 'text-sky-400' : ''}">★</button>
-              <button onclick="dismissArticle('${art.id || art.url}')" class="text-slate-500 hover:text-rose-400 text-xs">✕</button>
+              <button onclick="dismissArticle('${art.guid_hash || art.id}')" class="text-slate-500 hover:text-rose-400 text-xs">✕</button>
             </div>
           </div>
 
@@ -679,30 +692,46 @@
       if (el) el.classList.toggle('hidden');
     };
 
-    window.dismissArticle = function(id) {
+    window.dismissArticle = function(rawId) {
+      if (!rawId) return;
+      const id = String(rawId);
+      
       state.dismissedIds.add(id);
       state.lastDismissedId = id;
+      
+      // Persist as string array
       localStorage.setItem('aio_dismissed', JSON.stringify(Array.from(state.dismissedIds)));
       
+      // Trigger Toast Notification
       const toast = document.getElementById('undoToast');
-      toast.classList.remove('translate-y-20', 'opacity-0');
-      setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 4500);
+      if (toast) {
+        toast.classList.remove('translate-y-20', 'opacity-0');
+        clearTimeout(window._toastTimer);
+        window._toastTimer = setTimeout(() => {
+          toast.classList.add('translate-y-20', 'opacity-0');
+        }, 4500);
+      }
 
+      // Re-render UI immediately
       renderApp();
     };
 
     window.undoDismiss = function() {
       if (state.lastDismissedId) {
-        state.dismissedIds.delete(state.lastDismissedId);
+        state.dismissedIds.delete(String(state.lastDismissedId));
         state.lastDismissedId = null;
         localStorage.setItem('aio_dismissed', JSON.stringify(Array.from(state.dismissedIds)));
-        document.getElementById('undoToast').classList.add('translate-y-20', 'opacity-0');
+        
+        const toast = document.getElementById('undoToast');
+        if (toast) toast.classList.add('translate-y-20', 'opacity-0');
+        
         renderApp();
       }
     };
 
     window.restoreDismissed = function() {
       state.dismissedIds.clear();
+      state.lastDismissedId = null;
       localStorage.removeItem('aio_dismissed');
       renderApp();
     };
